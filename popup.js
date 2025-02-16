@@ -1,5 +1,16 @@
 document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("gemini").focus();
+    const inputField = document.getElementById("gemini");
+    const summarizeButton = document.getElementById("summarize-btn"); // The button
+
+    // Listen for Enter key press in the input field
+    inputField.addEventListener("keypress", (event) => {
+        if (event.key === "Enter") { 
+            event.preventDefault(); // Prevents form submission (if inside a form)
+            summarizeButton.focus();
+            summarizeButton.click(); // Triggers the button click
+        }
+    });
     document.getElementById("summarize-btn").addEventListener("click", async () => {
         chrome.tabs.query({ active: true, lastFocusedWindow: true }, async (tabs) => {
             
@@ -7,9 +18,9 @@ document.addEventListener("DOMContentLoaded", () => {
             const currentTabUrl = tabs[0].url;           //was origanally for summarizing youtube vids
             console.log("Detected URL:", currentTabUrl); // LOG THE CURRENT TAB URL
 
-            document.getElementById("summary-output").innerText = "Generating response...";
+            document.getElementById("summary-output").innerText= "Generating response...";
             const summary = await summarizeVideo(query); // Use the currentTabUrl here
-            document.getElementById("summary-output").innerText = summary;
+            document.getElementById("summary-output").innerHTML = summary;
         });
     });
 });
@@ -37,7 +48,15 @@ async function summarizeVideo(query) {
         console.log("Gemini API Response:", data); // LOG API RESPONSE
 
         if (data && data.candidates) {
-            return data.candidates[0].content.parts[0].text;
+            let rawText = data.candidates[0].content.parts[0].text;
+
+            let formattedText = rawText
+                .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>") // Bold (**text** -> <strong>text</strong>)
+                .replace(/\*(?!\s)(.*?)\*/g, "<em>$1</em>") // Italics (*text* -> <em>text</em>)
+                .replace(/\n\* /g, "\n - ") // Convert * to - for bullet points
+                .replace(/\n/g, "<br>"); // Convert new lines to <br>
+
+            return formattedText; // Return formatted text
         } else {
             return "No response available.";
         }
